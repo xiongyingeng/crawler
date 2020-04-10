@@ -125,9 +125,9 @@ def save(filename, resultslist):
 
 def run(filepath):
     # 获取车型
-    # car_list = model_list(filepath)
+    car_list = model_list(filepath)
     # car_list = ["JX7006BEV", "YTK6118GEV", "VCD7204C31PPHEV", "SQJ6460M1BEV"]
-    car_list = ['SX5040XXYBEV331S']
+    # car_list = ['SX5040XXYBEV331S']
 
     if len(car_list) < 20:
         thread_num = 1
