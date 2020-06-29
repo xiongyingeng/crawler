@@ -13,6 +13,13 @@ http://www.miit.gov.cn/asopCmsSearch/n2282/index.html?searchId=qcppcx
 使用scrapy小试牛刀，爬取易车网车型对应的价格等  
 http://car.bitauto.com/charlist.html
 
-## 汽车vin判断是否正确以及可能对应的品牌车型
+## vinMatch 
+汽车vin判断是否正确以及可能对应的品牌车型
 - brand.py      vin对应的品牌、车辆型号等 (使用selenium爬取)  http://www.chinacar.com.cn/vin_index.html
 - verify.py     检验vin是否正确
+
+## vin2Model
+汽车vin对应的品牌、车型、年份、底盘等
+- vinToModel.py   爬取http://www.fenco.cn/Index/search.html?
+
+
