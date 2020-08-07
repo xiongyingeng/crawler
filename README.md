@@ -16,10 +16,10 @@ http://car.bitauto.com/charlist.html
 ## vinMatch 
 汽车vin判断是否正确以及可能对应的品牌车型
 - brand.py      vin对应的品牌、车辆型号等 (使用selenium爬取)  http://www.chinacar.com.cn/vin_index.html
-- verify.py     检验vin是否正确
+- verify.py     检验vin是否正确、以及对应的VIN年份
 
 ## vin2Model
-汽车vin对应的品牌、车型、年份、底盘等
+汽车vin对应的品牌、车型、年份、底盘等（网站有限制)
 - vinToModel.py   爬取http://www.fenco.cn/Index/search.html?
 
 

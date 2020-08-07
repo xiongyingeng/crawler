@@ -57,17 +57,43 @@ def checksum(vin_str):
             return -3
 
 
+def create_year(vin):
+    year_flag = {"1": "2001", "2": "2002", "3": "2003", "4": "2004", "5": "2005", "6": "2006", "7": "2007", "8": "2008", "9": "2009", "A": "2010", "B": "2011", "C": "2012", "D": "2013", "E": "2014",
+                 "F": "2015", "G": "2016", "H": "2017", "J": "2018", "K": "2019", "L": "2020", "M": "2021", "N": "2022", "P": "2023", "R": "2024", "S": "2025", "T": "2026", "V": "2027", "W": "2028",
+                 "X": "2029", "Y": "2030"}
+
+    if len(vin) != 17:
+        return -1
+
+    key = vin[9]
+
+    return year_flag.get(key, "-2")
+
+
+def run(filename):
+    with open(filename, mode='r') as rf:
+        result = []
+        for row in rf:
+            vin = row.strip().replace('\r', '').replace('\n', '')
+            result.append((vin, checksum(vin), create_year(vin)))
+
+        import pandas as pd
+        pd.DataFrame(data=result, columns=['vin', 'code', 'vin年份']).to_csv("校验结果.csv", encoding='utf-8-sig')
+
+
 if __name__ == '__main__':
 
-    a = ['LZ91AE3A4J3LSA560',
-         'LZ91AE3A5H1LSA511',
-         'LZ91AE3A5J3LSA907',
-         'LZ91AE3A7H2LSA360',
-         'LZ91AE3A8J3LSA495',
-         'LZ92RH3A4G1LSA027',
-         'LZ932G3A0H1LSA014',
-         'LZ932G3A0H1LSA062'
-         ]
+    # a = ['LZ91AE3A4J3LSA560',
+    #      'LZ91AE3A5H1LSA511',
+    #      ]
 
-    for dd in a:
-        print(checksum(dd))
+    import sys
+    import os
+
+    filename = sys.argv[1]
+
+    if os.path.isfile(filename):
+        run(filename)
+    else:
+        print(checksum(filename))
+        print(create_year(filename))

@@ -18,7 +18,7 @@ MODEL_URL = 'https://www.cn357.com'
 def model_list(filename):
     # 获取车类型
     df = pd.read_table(filename, sep=",", header=None, encoding="utf-8-sig", low_memory=False)
-    return df[1].dropna().unique().tolist()
+    return df[0].dropna().unique().tolist()
 
 
 def get(url):
@@ -63,7 +63,10 @@ def car_model_url(model):
         # 解析页面
         html = etree.HTML(res.text)
         result = html.xpath("//div[@class='gMain']//ul/li/h3/a/@href")
-        return model, notice(result[0])
+        if result:
+            return model, notice(result[0])
+        else:
+            return model, None
 
 
 def try_find_child(element):
@@ -160,7 +163,7 @@ def run(filepath):
                 value.append(tmp)
             except Exception as exc:
                 print(repr(exc))
-                break
+                continue
         print("已完成爬取")
         if value:
             dir_path = os.path.dirname(filepath)
@@ -177,6 +180,37 @@ def run(filepath):
         print("花费时长:", time.time() - t)
 
 
+def run_single(filepath):
+    car_list = model_list(filepath)
+    value = []
+    head = None
+    t = time.time()
+    for model in car_list:
+        model, data = car_model_url(model)
+        if head is None:
+            head = [data[i] for i in range(len(data)) if i % 2 == 0]
+            head.insert(0, "vin")
+
+        tmp = [data[i] for i in range(len(data)) if i % 2 == 1]
+        tmp.insert(0, model)
+        value.append(tmp)
+
+    print("已完成爬取")
+    if value:
+        dir_path = os.path.dirname(filepath)
+        base_name = os.path.basename(filepath).rsplit(".", 1)[0]
+        save_path = os.path.join(dir_path, str(base_name) + "-cvi.csv")
+        try:
+            numpy_list = np.asarray(value)
+            pd.DataFrame(numpy_list, columns=head).to_csv(save_path, index=False, sep='|')
+        except:
+            if head is not None:
+                value.insert(0, head)
+            save(save_path, value)
+
+    print("花费时长:", time.time() - t)
+
+
 if __name__ == '__main__':
     import sys
 
@@ -185,4 +219,5 @@ if __name__ == '__main__':
         exit(2)
     filename = sys.argv[1]
     print(filename)
-    run(filename)
+    # run(filename)
+    run_single(filename)
