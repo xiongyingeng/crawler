@@ -22,4 +22,8 @@ http://car.bitauto.com/charlist.html
 汽车vin对应的品牌、车型、年份、底盘等（网站有限制)
 - vinToModel.py   爬取http://www.fenco.cn/Index/search.html?
 
+## cn357_notice
+商车网汽车公众型号 https://www.cn357.com/notice_list/
+notcie_list_multithreading.py -- 多线程处理
+notice_list.py -- 单线程处理
 
