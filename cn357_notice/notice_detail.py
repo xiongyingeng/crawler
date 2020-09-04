@@ -6,12 +6,12 @@
 # 公众型号详细信息
 import time
 import pandas as pd
-from sqlalchemy import create_engine
 from queue import Queue
 
-from notcie_list_multithreading import logger, Consumer
+from .notice_list_multithreading import logger, Consumer, engine
 
-engine = create_engine('sqlite:///notice_details.db', echo=False)
+# 不支持多线程，需要加锁
+# engine = create_engine('sqlite:///notice_details.db', echo=False)
 
 
 # 计算函数耗时
@@ -28,7 +28,7 @@ def run_time_back(func):
 
 def detail(models_queue):
     # sqlite engine
-    pages_thread_num = 3
+    pages_thread_num = 8
 
     thread_list = []
     for j in range(pages_thread_num):

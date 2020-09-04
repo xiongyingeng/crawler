@@ -3,19 +3,17 @@
 # @Author : Will
 # @Software: PyCharm
 
-from sqlalchemy import create_engine
 from queue import Queue
-from notcie_list_multithreading import PageConsumer
+from .notice_list_multithreading import PageConsumer, Consumer
 
 
 def batch_pages(pages: list):
     # 页码处理
 
-    # sqlite engine
-    engine = create_engine('sqlite:///notice_details.db', echo=False)
     pages_queue = Queue()
     models_queue = Queue()
-    pages_thread_num = 2
+    pages_thread_num = 5
+    models_thread_num = 8
 
     thread_list = []
 
@@ -23,12 +21,16 @@ def batch_pages(pages: list):
         pages_queue.put(str(page).strip().replace('\r', '').replace('\n', ''))
 
     for j in range(pages_thread_num):
-        p = PageConsumer(pages_queue, models_queue, engine, "notice")
+        p = PageConsumer(pages_queue, models_queue, "notice")
         p.start()
         thread_list.append(p)
 
     for thread in thread_list:
         thread.join()
+
+    for k in range(models_thread_num):
+        c = Consumer(models_queue, "details")
+        c.start()
 
 
 def main(file: str):

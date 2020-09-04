@@ -4,7 +4,8 @@
 # @Software: PyCharm
 # 多线程处理,并存储到sqlite3数据库
 # 采用生产->消费模型
-
+import os
+import datetime
 import random
 import time
 import pandas as pd
@@ -17,13 +18,19 @@ import logging
 
 from req import Request
 
+engine = create_engine("mysql+pymysql://root:root@192.168.70.91:3306/cn_notice_details?charset=utf8")
+
 # 商车网
 BASE_URL = "https://www.cn357.com"
 
+log_path = "logs"
+if not os.path.exists(log_path):
+    os.mkdir(log_path)
+
 logger = logging.getLogger(__name__)
-logger.setLevel(level=logging.INFO)
-handler = logging.FileHandler("log.txt")
-handler.setLevel(logging.INFO)
+logger.setLevel(level=logging.DEBUG)
+handler = logging.FileHandler(os.path.join(log_path, "log_{}.txt".format(datetime.datetime.now().strftime("%Y%m%d%H%M"))))
+handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s-%(filename)s-%(lineno)d-%(levelname)s-%(message)s')
 handler.setFormatter(formatter)
 
@@ -33,7 +40,7 @@ console.setLevel(logging.DEBUG)
 logger.addHandler(handler)
 logger.addHandler(console)
 #
-lock = threading.Lock()
+# lock = threading.Lock()
 
 
 class Producer(threading.Thread):
@@ -89,7 +96,7 @@ class Producer(threading.Thread):
 class PageConsumer(threading.Thread):
     """没一页的消费者，同时也是每个公众型号详细信息生产者"""
 
-    def __init__(self, page_queue, models_queue, engine, table_name, *args, **kwargs):
+    def __init__(self, page_queue, models_queue, table_name, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.pages_queue = page_queue
         self.models_queue = models_queue
@@ -131,9 +138,10 @@ class PageConsumer(threading.Thread):
             try:
                 time.sleep(random.uniform(1, 3))
                 df = self.page_one(page_id)
-                lock.acquire()
+                # lock.acquire()
                 df.to_sql(self.table_name, self.engine, if_exists='append', index=False)
-                lock.release()
+                # lock.release()
+                del df
             except Exception as e:
                 # 写入错误日志中
                 logger.error(f"{page_id}-PageConsumer failure")
@@ -145,7 +153,7 @@ class PageConsumer(threading.Thread):
 class Consumer(threading.Thread):
     """消费者-每个公众型号对应的详细信息"""
 
-    def __init__(self, model_queue, engine, table_name, *args, **kwargs):
+    def __init__(self, model_queue, table_name, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.models_queue = model_queue
         self.engine = engine
@@ -158,9 +166,11 @@ class Consumer(threading.Thread):
                 time.sleep(random.uniform(1, 3))
                 df = pd.read_html(BASE_URL + model)[0]
                 df_result = self.handle(df)
-                lock.acquire()
+                # lock.acquire()
                 df_result.to_sql(self.table_name, self.engine, if_exists='append', index=False, method='multi')
-                lock.release()
+                # lock.release()
+                del df
+                del df_result
                 logger.debug(f"{model} is succeed")
             except Exception as e:
                 logger.error(f"{model}-Consumer failure")
@@ -201,11 +211,10 @@ def main(batch=0):
     models_queue = Queue()
 
     notices_thread_num = 3
-    pages_thread_num = 4
-    models_thread_num = 4
+    pages_thread_num = 5
+    models_thread_num = 8
 
-    # sqlite engine
-    engine = create_engine('sqlite:///notice_details.db', echo=False)
+    # engine = create_engine('sqlite:///notice_details.db', echo=False)
 
     if 0 == batch:
         # create notice list
@@ -229,7 +238,7 @@ def main(batch=0):
     thread_list.clear()
     # 每批次每一页的处理，并生成每页公众号url队列
     for j in range(pages_thread_num):
-        p = PageConsumer(pages_queue, models_queue, engine, "notice")
+        p = PageConsumer(pages_queue, models_queue, "notice")
         p.start()
         thread_list.append(p)
 
@@ -237,9 +246,10 @@ def main(batch=0):
     for thread in thread_list:
         thread.join()
 
+    time.sleep(10)
     # 处理详细信息
     for k in range(models_thread_num):
-        c = Consumer(models_queue, engine, "details")
+        c = Consumer(models_queue, "details")
         c.start()
 
 
