@@ -2,9 +2,10 @@
 # @Time : 2020/8/31 10:23
 # @Author : Will
 # @Software: PyCharm
+# 爬取指定某些个批次的页码
 
 from queue import Queue
-from .notice_list_multithreading import PageConsumer, Consumer
+from notice_list_multithreading import PageConsumer, Consumer
 
 
 def batch_pages(pages: list):

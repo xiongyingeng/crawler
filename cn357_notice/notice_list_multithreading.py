@@ -16,6 +16,8 @@ from queue import Queue
 from lxml import etree
 import logging
 
+import gc
+
 from req import Request
 
 engine = create_engine("mysql+pymysql://root:root@192.168.70.91:3306/cn_notice_details?charset=utf8")
@@ -34,13 +36,26 @@ handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s-%(filename)s-%(lineno)d-%(levelname)s-%(message)s')
 handler.setFormatter(formatter)
 
+handler_err = logging.FileHandler(os.path.join(log_path, "log_{}_err.txt".format(datetime.datetime.now().strftime("%Y%m%d%H%M"))))
+handler_err.setLevel(logging.ERROR)
+formatter_err = logging.Formatter('%(asctime)s-%(message)s')
+handler_err.setFormatter(formatter_err)
+
 console = logging.StreamHandler()
 console.setLevel(logging.DEBUG)
 
 logger.addHandler(handler)
 logger.addHandler(console)
+logger.addHandler(handler_err)
+
+
 #
 # lock = threading.Lock()
+
+
+def recycling():
+    # 强制进行垃圾回收
+    gc.collect()
 
 
 class Producer(threading.Thread):
@@ -161,21 +176,22 @@ class Consumer(threading.Thread):
 
     def run(self) -> None:
         while not self.models_queue.empty():
-            model = self.models_queue.get(timeout=10)
+            model = self.models_queue.get()
             try:
                 time.sleep(random.uniform(1, 3))
-                df = pd.read_html(BASE_URL + model)[0]
+                df_list = pd.read_html(BASE_URL + model)
+                df = df_list[0]
                 df_result = self.handle(df)
                 # lock.acquire()
-                df_result.to_sql(self.table_name, self.engine, if_exists='append', index=False, method='multi')
+                df_result.to_sql(self.table_name, self.engine, if_exists='append', index=False)
                 # lock.release()
-                del df
-                del df_result
+                df_list.clear()
                 logger.debug(f"{model} is succeed")
             except Exception as e:
-                logger.error(f"{model}-Consumer failure")
-                logger.exception("{}:{}".format(model, str(e)))
+                logger.error(f"Consumer failure-{model}")
+                logger.warning("{}:{}".format(model, str(e)))
 
+        recycling()
         logger.debug('Consumer finished!!!')
 
     def handle(self, df) -> pd.DataFrame:
@@ -186,6 +202,7 @@ class Consumer(threading.Thread):
         df2.reset_index(inplace=True, drop=True)
         df12 = pd.concat([df1, df2], axis=1)
         df12.columns = df12.iloc[0]
+        del df_tmp
         return df12.loc[1:, :]
 
 

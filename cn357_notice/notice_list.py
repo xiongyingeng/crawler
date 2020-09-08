@@ -9,6 +9,7 @@ import pandas as pd
 from lxml import etree
 
 import logging
+from req import Request
 
 logger = logging.getLogger(__name__)
 logger.setLevel(level=logging.DEBUG)
@@ -22,8 +23,6 @@ console.setLevel(logging.DEBUG)
 
 logger.addHandler(handler)
 logger.addHandler(console)
-
-from req import Request
 
 
 class NoticeListHandle(object):

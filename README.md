@@ -24,6 +24,5 @@ http://car.bitauto.com/charlist.html
 
 ## cn357_notice
 商车网汽车公众型号 https://www.cn357.com/notice_list/
-notcie_list_multithreading.py -- 多线程处理
-notice_list.py -- 单线程处理
+
 

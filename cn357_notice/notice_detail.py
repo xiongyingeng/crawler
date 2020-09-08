@@ -3,12 +3,13 @@
 # @Author : Will
 # @Software: PyCharm
 
-# 公众型号详细信息
+# 爬取指定文件的公或者notice表中的众型号详细信息
 import time
 import pandas as pd
 from queue import Queue
 
-from .notice_list_multithreading import logger, Consumer, engine
+from notice_list_multithreading import logger, Consumer, engine
+
 
 # 不支持多线程，需要加锁
 # engine = create_engine('sqlite:///notice_details.db', echo=False)
@@ -32,7 +33,7 @@ def detail(models_queue):
 
     thread_list = []
     for j in range(pages_thread_num):
-        p = Consumer(models_queue, engine, "details")
+        p = Consumer(models_queue, "details")
         p.start()
         thread_list.append(p)
 
@@ -43,19 +44,60 @@ def detail(models_queue):
 @run_time_back
 def read_db():
     frame = pd.read_sql('notice', engine)
-    frame.info()
     return frame
 
 
-def main():
+def main(file=0):
     models_queue = Queue()
-    frame = read_db()
+
+    if 0 == file:
+        frame = read_db()
+    else:
+        frame = pd.read_csv(file, encoding='utf-8-sig')
 
     for ind, row in frame['href'].items():
         models_queue.put(row)
 
+    del frame
+    detail(models_queue)
+
+
+def detail_by_batch(batch_no):
+    """按批次查询"""
+    models_queue = Queue()
+    sql = "SELECT href FROM notice WHERE `批次`='第{}批'".format(batch_no)
+    logger.debug(sql)
+    frame = pd.read_sql(sql, engine)
+    logger.debug("当前是第{}批次,公众型号数{}".format(batch, len(frame)))
+    for ind, row in frame['href'].items():
+        models_queue.put(row)
+
+    del frame
     detail(models_queue)
 
 
 if __name__ == '__main__':
-    main()
+    import sys
+    import os
+
+    print("please input filename or nothing[default pull all models]")
+    filename = 0
+    if len(sys.argv) > 1:
+        filename = sys.argv[1]
+        if not os.path.exists(filename):
+            print("filename:{} not exists.".format(filename))
+            if len(sys.argv) > 2:
+                # 从某个批次开始直到批次为1，批次号递减
+                start_batch = int(filename)
+                if sys.argv[2] == 'all':
+                    for batch in range(start_batch, 0, -1):
+                        detail_by_batch(batch)
+                        time.sleep(30)
+            else:
+                batch = int(filename)
+                detail_by_batch(batch)
+            exit(0)
+        else:
+            main(filename)
+    else:
+        main(filename)

@@ -12,16 +12,9 @@ class CarInfoQuery(object):
     def __init__(self):
         self.frame = None
 
-    @property
-    def sqlite_db(self):
-        return self.db_name
-
-    @sqlite_db.setter
-    def sqlite_db(self, db_name):
-        self.db_name = db_name
-
     def init_db(self):
-        engine = create_engine(f'sqlite:///{self.db_name}')
+        # engine = create_engine(f'sqlite:///{self.db_name}')
+        engine = create_engine("mysql+pymysql://root:root@192.168.70.91:3306/cn_notice_details?charset=utf8")
         self.frame = pd.read_sql('details', engine)
         self.frame.drop_duplicates(inplace=True)
         self.frame['pre_vin'] = self.frame['识别代号'].apply(lambda x: x if pd.isna(x) else x[:3])
@@ -54,7 +47,6 @@ if __name__ == '__main__':
     vin = sys.argv[1]
 
     cq = CarInfoQuery()
-    cq.sqlite_db = "notice_details_333-2.db"
     cq.init_db()
     res = cq.query_by_vin(vin)
     print(res)
