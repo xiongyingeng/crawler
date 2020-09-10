@@ -10,17 +10,23 @@ import random
 import time
 import pandas as pd
 from sqlalchemy import create_engine
+import pymysql
 import threading
 from queue import Queue
 
 from lxml import etree
 import logging
 
-import gc
-
 from req import Request
 
-engine = create_engine("mysql+pymysql://root:root@192.168.70.91:3306/cn_notice_details?charset=utf8")
+
+# import objgraph
+
+def get_sql_conn():
+    engine = create_engine("mysql+pymysql://root:root@192.168.70.91:3306/cn_notice_details?charset=utf8")
+    # conn = engine.connect()
+    return engine
+
 
 # 商车网
 BASE_URL = "https://www.cn357.com"
@@ -51,11 +57,6 @@ logger.addHandler(handler_err)
 
 #
 # lock = threading.Lock()
-
-
-def recycling():
-    # 强制进行垃圾回收
-    gc.collect()
 
 
 class Producer(threading.Thread):
@@ -115,7 +116,7 @@ class PageConsumer(threading.Thread):
         super().__init__(*args, **kwargs)
         self.pages_queue = page_queue
         self.models_queue = models_queue
-        self.engine = engine
+        self.engine = get_sql_conn()
         self.table_name = table_name
         self.req = Request(logger)
 
@@ -164,6 +165,11 @@ class PageConsumer(threading.Thread):
 
         logger.debug('PageConsumer finished!!!')
 
+        try:
+            self.engine.dispose()
+        except Exception as e:
+            logger.warning(str(e))
+
 
 class Consumer(threading.Thread):
     """消费者-每个公众型号对应的详细信息"""
@@ -171,11 +177,13 @@ class Consumer(threading.Thread):
     def __init__(self, model_queue, table_name, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.models_queue = model_queue
-        self.engine = engine
+        self.engine = get_sql_conn()
         self.table_name = table_name
 
     def run(self) -> None:
         while not self.models_queue.empty():
+            # objgraph.show_growth()
+
             model = self.models_queue.get()
             try:
                 time.sleep(random.uniform(1, 3))
@@ -191,8 +199,13 @@ class Consumer(threading.Thread):
                 logger.error(f"Consumer failure-{model}")
                 logger.warning("{}:{}".format(model, str(e)))
 
-        recycling()
+            # objgraph.show_growth()
+
         logger.debug('Consumer finished!!!')
+        try:
+            self.engine.dispose()
+        except Exception as e:
+            logger.warning(str(e))
 
     def handle(self, df) -> pd.DataFrame:
         df_tmp = df.loc[1:20]
@@ -202,7 +215,6 @@ class Consumer(threading.Thread):
         df2.reset_index(inplace=True, drop=True)
         df12 = pd.concat([df1, df2], axis=1)
         df12.columns = df12.iloc[0]
-        del df_tmp
         return df12.loc[1:, :]
 
 

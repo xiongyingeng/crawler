@@ -8,11 +8,7 @@ import time
 import pandas as pd
 from queue import Queue
 
-from notice_list_multithreading import logger, Consumer, engine
-
-
-# 不支持多线程，需要加锁
-# engine = create_engine('sqlite:///notice_details.db', echo=False)
+from notice_list_multithreading import logger, Consumer, get_sql_conn
 
 
 # 计算函数耗时
@@ -29,7 +25,7 @@ def run_time_back(func):
 
 def detail(models_queue):
     # sqlite engine
-    pages_thread_num = 8
+    pages_thread_num = 10
 
     thread_list = []
     for j in range(pages_thread_num):
@@ -43,7 +39,9 @@ def detail(models_queue):
 
 @run_time_back
 def read_db():
+    engine = get_sql_conn()
     frame = pd.read_sql('notice', engine)
+    engine.dispose()
     return frame
 
 
@@ -65,6 +63,7 @@ def main(file=0):
 def detail_by_batch(batch_no):
     """按批次查询"""
     models_queue = Queue()
+    engine = get_sql_conn()
     sql = "SELECT href FROM notice WHERE `批次`='第{}批'".format(batch_no)
     logger.debug(sql)
     frame = pd.read_sql(sql, engine)
@@ -81,7 +80,7 @@ if __name__ == '__main__':
     import os
 
     print("please input filename or nothing[default pull all models]")
-    filename = 0
+    filename = "test.txt"
     if len(sys.argv) > 1:
         filename = sys.argv[1]
         if not os.path.exists(filename):
