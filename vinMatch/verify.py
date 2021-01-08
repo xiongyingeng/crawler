@@ -6,13 +6,16 @@
 # vin校验
 
 
-def checksum(vin_str):
-    """vin码校验, 成功返回200
+def checksum(vin):
+    """vin码校验, 成功则返回200
     计算方法：VIN码从从第一位开始，码数字的对应值×该位的加权值，计算全部17位的乘积值相加除以11，所得的余数，即为第九位校验值
     """
-
+    vin_str = str(vin)
     if len(vin_str) != 17:
         return -1
+
+    if vin_str[0] == '0':
+        return -2
 
     # 内容的权值: VIN码各位数字的“对应值”：
     text_weight = {
@@ -38,7 +41,7 @@ def checksum(vin_str):
             try:
                 tw = int(c)
             except ValueError:
-                return -2
+                return -3
 
         weight_sum += tw * position_weight[i]
 
@@ -47,6 +50,8 @@ def checksum(vin_str):
     if check_bit == 'X':
         if dst == 10:
             return 200
+        else:
+            return dst
     else:
         try:
             if int(check_bit) == dst:
@@ -54,7 +59,7 @@ def checksum(vin_str):
             else:
                 return dst
         except ValueError:
-            return -3
+            return -4
 
 
 def create_year(vin):
@@ -75,7 +80,7 @@ def run(filename):
         result = []
         for row in rf:
             vin = row.strip().replace('\r', '').replace('\n', '')
-            result.append((vin, checksum(vin), create_year(vin)))
+            result.append((str(vin), checksum(vin), create_year(vin)))
 
         import pandas as pd
         pd.DataFrame(data=result, columns=['vin', 'code', 'vin年份']).to_csv("校验结果.csv", encoding='utf-8-sig')
